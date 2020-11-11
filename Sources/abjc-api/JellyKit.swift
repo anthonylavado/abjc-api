@@ -1,3 +1,3 @@
-struct abjc_api {
+struct JellyKit {
     var text = "Hello, World!"
 }
