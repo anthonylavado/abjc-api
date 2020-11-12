@@ -59,7 +59,7 @@ public class ServerLocator {
         
     public init() {
         func receiveHandler(_ ipAddress: String, _ port: Int, _ response: Data) {
-            let utf8String = String(data: response, encoding: .utf8) ?? ""
+            print("RECIEVED \(ipAddress):\(String(port)) \(response)")
         }
         
         func errorHandler(error: UDPBroadcastConnection.ConnectionError) {
