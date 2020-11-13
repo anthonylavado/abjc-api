@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Noah Kamara on 23.10.20.
 //
@@ -8,7 +8,6 @@
 import Foundation
 import AVFoundation
 import os
-
 
 public class API {
     public class Models {}
@@ -18,20 +17,20 @@ public class API {
     private let scheme: String = "http"
     public let host: String
     public let port: Int
-    
+
     private let deviceId: String
     private var currentUser: AuthUser?
-    
-    private var logger: Logger = Logger(subsystem: "com.noahkamara.abjc-api", category: "API")
-    
+
+    private var logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "API")
+
     public init(_ host: String = "192.168.178.10", _ port: Int = 8096, _ user: AuthUser? = nil, _ deviceID: String? = nil) {
         self.host = host
         self.port = port
         self.deviceId = user?.deviceID ?? deviceID ?? UUID().uuidString
         self.currentUser = user
     }
-    
-    
+
+
     private func makeRequest(_ path: String, _ params: [String: String?] = [:], _ headers: [String: String] = [:]) -> URLRequest {
         var urlComponents = URLComponents()
         urlComponents.scheme = self.scheme
@@ -51,7 +50,7 @@ public class API {
         request.timeoutInterval = 60.0
         return request
     }
-    
+
     private func get(_ path: String, _ params: [String: String?] = [:], completion: @escaping Completions.Response) {
         let request = self.makeRequest(path, params)
         URLSession.shared.dataTask(with: request) { (data, response, error) in
@@ -60,7 +59,7 @@ public class API {
                 self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") \(error.localizedDescription)")
                 completion(.failure(error))
             }
-            
+
             if let httpResponse = response as? HTTPURLResponse {
                 do {
                     try Errors.ServerError.make(httpResponse.statusCode)
@@ -70,14 +69,14 @@ public class API {
                     completion(.failure(error))
                 }
             }
-            
+
             if let data = data {
                 self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") SUCCESS")
                 completion(.success(data))
             }
         }.resume()
     }
-    
+
     private func post(_ path: String, _ data: Data? = nil, _ completion: @escaping Completions.Basic) {
         var urlComponents = URLComponents()
         urlComponents.scheme = self.scheme
@@ -87,7 +86,7 @@ public class API {
         var request = self.makeRequest(path)
         request.httpMethod = "POST"
         request.httpBody = data
-        
+
         URLSession.shared.dataTask(with: request) { [self] (data, response, error) in
             if let error = error {
                 self.logger.notice("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") ERROR")
@@ -108,11 +107,11 @@ public class API {
             }
         }.resume()
     }
-    
+
     private func delete(_ path: String, _ params: [String: String?], _ data: Data, _ completion: @escaping Completions.Basic) {
         var request = self.makeRequest(path, params)
         request.httpMethod = "DELETE"
-        
+
         URLSession.shared.dataTask(with: request) { (data, response, error) in
             if let error = error {
                 self.logger.notice("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") ERROR")
@@ -133,8 +132,8 @@ public class API {
             }
         }.resume()
     }
-    
-    
+
+
     //MARK: Authorization
     private func authorizeByName(_ username: String, _ password: String, completion: @escaping Completions.AuthResponse) {
         var urlComponents = URLComponents()
@@ -161,7 +160,7 @@ public class API {
                     self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") \(error.localizedDescription)")
                     completion(.failure(error))
                 }
-                
+
                 if let data = data {
                     do {
                         let response = try JSONDecoder().decode(Responses.AuthResponse.self, from: data)
@@ -186,7 +185,7 @@ public class API {
             print(jsonBody)
         }
     }
-    
+
     public func authorize(_ username: String, _ password: String, completion: @escaping Completions.AuthResponse) {
         self.logger.info("API.authorize started")
         self.logger.debug("API.authorize '\(username)' @ '\(self.host):\(self.port)'  ")
@@ -195,8 +194,8 @@ public class API {
             completion(result)
         }
     }
-    
-    
+
+
     //MARK: System Info
     public func getSystemInfo(completion: @escaping Completions.SystemInfo) {
         self.logger.info("API.getSystemInfo started")
@@ -217,10 +216,10 @@ public class API {
             }
         }
     }
-    
-    
-    
-    
+
+
+
+
     //MARK: Query Items
     public func getItems(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getItems started")
@@ -247,16 +246,17 @@ public class API {
             }
         }
     }
-    
+
     public func getLatest(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getLatest started")
         self.logger.debug("API.getLatest type: \(type?.rawValue ?? "none")")
-        
+
         let path = "/emby/Users/\(self.currentUser?.id ?? "")/Items/Latest"
         let params = [
             "Recursive": String(true),
             "IncludeItemTypes": type?.rawValue ?? "Series,Movie",
-            "Fields": "Genres"
+            "Fields": "Genres",
+            "Limit": String(12)
         ]
         self.get(path, params) { (result) in
             switch result {
@@ -274,27 +274,27 @@ public class API {
             }
         }
     }
-    
+
     public func getResumable(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getResumable started")
         self.logger.debug("API.getResumable type: \(type?.rawValue ?? "none")")
-        let path = "/emby/Users/\(self.currentUser?.id ?? "")/Items/Latest"
+        let path = "/emby/Users/\(self.currentUser?.id ?? "")/Items/Resume"
         let params = [
             "Recursive": String(true),
             "IncludeItemTypes": type?.rawValue ?? "Series,Movie",
             "SortBy": "DatePlayed",
             "SortOrder": "Descending",
-            "Filters": "IsResumable",
             "Fields": "Genres"
         ]
         self.get(path, params) { (result) in
             switch result {
                 case .success(let data):
                     do {
-                        let items = try JSONDecoder().decode([Models.Item].self, from: data)
+                        let res = try JSONDecoder().decode(Responses.ItemResponse<[Models.Item]>.self, from: data)
                         self.logger.info("API.getResumable completed")
-                        completion(.success(items))
+                        completion(.success(res.items))
                     } catch let error {
+                        print(error)
                         self.logger.notice("API.getResumable ERROR")
                         self.logger.debug("API.getResumable \(error.localizedDescription)")
                         completion(.failure(error))
@@ -304,6 +304,30 @@ public class API {
         }
     }
     
+    public func getNextUp(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
+        self.logger.info("API.getNextUp started")
+        self.logger.debug("API.getNextUp type: \(type?.rawValue ?? "none")")
+        let path = "/Shows/NextUp"
+        let params = [
+            "userId": currentUser?.id ?? ""
+        ]
+        self.get(path, params) { (result) in
+            switch result {
+                case .success(let data):
+                    do {
+                        let items = try JSONDecoder().decode([Models.Item].self, from: data)
+                        self.logger.info("API.getNextUp completed")
+                        completion(.success(items))
+                    } catch let error {
+                        self.logger.notice("API.getNextUp ERROR")
+                        self.logger.debug("API.getNextUp \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
+                case .failure(let error): completion(.failure(error))
+            }
+        }
+    }
+
     public func getFavorites(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getFavorites started")
         self.logger.debug("API.getFavorites type: \(type?.rawValue ?? "none")")
@@ -330,11 +354,11 @@ public class API {
             }
         }
     }
-    
+
     public func getSimilar(for item_id: String, completion: @escaping Completions.Items) {
         self.logger.info("API.getSimilar started")
         self.logger.debug("API.getSimilar item: \(item_id)")
-        
+
         let path = "/Items/\(item_id)/Similar"
         let params = [
             "Recursive": String(true),
@@ -358,12 +382,12 @@ public class API {
             }
         }
     }
-    
+
     public func getMovie(_ item_id: String, completion: @escaping Completions.Movie) {
         self.logger.info("API.getMovie started")
         self.logger.debug("API.getMovie item: \(item_id)")
         let path = "/Users/\(currentUser?.id ?? "")/Items/\(item_id)"
-        
+
         self.get(path) { (result) in
             switch result {
                 case .success(let data):
@@ -380,8 +404,8 @@ public class API {
             }
         }
     }
-    
-    
+
+
     // MARK: Get Images
     public func getImages(for item_id: String, completion: @escaping Completions.Images) {
         self.logger.info("API.getImages started")
@@ -403,8 +427,8 @@ public class API {
             }
         }
     }
-    
-    
+
+
     // MARK: Shows (Seasons, Episodes)
     public func getSeries(_ item_id: String, completion: @escaping Completions.Series) {
         self.logger.info("API.getSeries started")
@@ -429,7 +453,7 @@ public class API {
             }
         }
     }
-    
+
     public func getSeasons(for series_id: String, completion: @escaping Completions.Seasons) {
         self.logger.info("API.getSeasons started")
         self.logger.debug("API.getSeasons series: \(series_id)")
@@ -456,7 +480,7 @@ public class API {
             }
         }
     }
-    
+
     public func getEpisodes(for series_id: String, completion: @escaping Completions.Episodes) {
         self.logger.info("API.getEpisodes started")
         self.logger.debug("API.getEpisodes series: \(series_id)")
@@ -484,9 +508,9 @@ public class API {
             }
         }
     }
-    
-    
-    
+
+
+
     // MARK: Search
     public func searchItems(_ searchTerm: String, completion: @escaping Completions.Items) {
         self.logger.info("API.searchItems started")
@@ -515,7 +539,7 @@ public class API {
             }
         }
     }
-    
+
     public func searchPeople(_ searchTerm: String, completion: @escaping Completions.People) {
         self.logger.info("API.searchPeople started")
         self.logger.debug("API.searchPeople term: \(searchTerm)")
@@ -542,7 +566,7 @@ public class API {
             }
         }
     }
-    
+
     // MARK: PlaybackStatus
     public func startPlayback(for item_id: String, at positionTicks: Int) {
         self.logger.info("API.startPlayback started")
@@ -564,7 +588,7 @@ public class API {
             print(error)
         }
     }
-    
+
     public func reportPlayback(for item_id: String, positionTicks: Int) {
         self.logger.info("API.reportPlayback started")
         self.logger.debug("API.reportPlayback item: \(item_id) position: \(positionTicks)")
@@ -585,7 +609,7 @@ public class API {
             print("ERROR", error)
         }
     }
-    
+
     public func stopPlayback(for item_id: String, positionTicks: Int) {
         self.logger.info("API.stopPlayback started")
         self.logger.debug("API.stopPlayback item: \(item_id) position: \(positionTicks)")
@@ -619,10 +643,9 @@ public class API {
             print(error)
         }
     }
-    
-    
-    
-    // MARK: get URLs
+
+
+
     public func getStreamURL(for item_id: String, _ source_id: String) -> URL {
         self.logger.info("API.stopPlayback item: \(item_id) source: \(source_id)")
         let path = "/videos/18f93bce-e588-75f1-5a12-7dc7aa05f041/master.m3u8"
@@ -649,8 +672,13 @@ public class API {
         let url = request.url!
         return url
     }
+
     
-    
+    /// Returns AVURLAsset for given stream
+    /// - Parameters:
+    ///   - item_id: Item ID
+    ///   - source_id: Media Source ID
+    /// - Returns: AVURLAsset for use in VideoPlayer
     public func getPlayerItem(for item_id: String, _ source_id: String) -> AVURLAsset {
         self.logger.info("API.getPlayerItem item: \(item_id) source: \(source_id)")
 
@@ -678,14 +706,22 @@ public class API {
         let item = AVURLAsset(url: url, options: options)
         return item
     }
+
     
-    public func getImageURL(for id: String, _ type: Models.ImageType = .primary, _ maxWidth: Int = 600, _ quality: Int = 70) -> URL {
-        self.logger.info("API.getImageURL id: \(id) type: \(type.rawValue) maxWidth: \(maxWidth) quality: \(quality)")
+    /// Returns the URL for the specified image
+    /// - Parameters:
+    ///   - id: Item ID
+    ///   - type: Image Type
+    ///   - maxWidth: Maximum Width of the image
+    ///   - quality: Image Quality
+    /// - Returns: Image URL
+    public func getImageURL(for id: String, _ type: Models.ImageType = .primary, _ maxWidth: Int? = nil, _ quality: Int? = nil) -> URL {
+//        self.logger.info("API.getImageURL id: \(id) type: \(type.rawValue) maxWidth: \(maxWidth) quality: \(quality)")
         let path = "/Items/\(id)/Images/\(type.rawValue)"
         let params = [
-            "MaxWidth": String(maxWidth),
+            "MaxWidth": String(maxWidth ?? 600),
             "Format": "jpg",
-            "Quality": String(70)
+            "Quality": String(quality ?? 70)
         ]
         let request = self.makeRequest(path, params)
         let url = request.url!

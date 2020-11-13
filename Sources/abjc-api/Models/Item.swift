@@ -21,7 +21,7 @@ extension API.Models {
         public var genres: [Genre] = []
         public var type: MediaType
         public var people: [Person]?
-        private var runTimeTicks: Int?
+        public var runTimeTicks: Int?
         private var imageBlurHashes: [String: [String: String]]?
         
         public func blurHash(for imageType: ImageType) -> String? {
@@ -30,7 +30,7 @@ extension API.Models {
         }
         
         public var runTime: Int {
-            return Int(runTimeTicks ?? 0/1000000)
+            return Int((runTimeTicks ?? 0)/1000000)
         }
         public var userData: UserData
         

@@ -9,7 +9,7 @@ import Foundation
 
 extension API.Models {
     public struct UserData: Decodable {
-        private let playbackPositionTicks: Int
+        public let playbackPositionTicks: Int
         public var playbackPosition: Int {
             return Int(playbackPositionTicks/1000000)
         }
