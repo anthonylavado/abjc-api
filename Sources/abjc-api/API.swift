@@ -158,11 +158,24 @@ public class API {
         ]
         if let data = try? JSONEncoder().encode(jsonBody) {
             request.httpBody = data
+            
             URLSession.shared.dataTask(with: request) { (data, response, error) in
+                if let httpResponse = response as? HTTPURLResponse {
+                    do {
+                        try Errors.ServerError.make(httpResponse.statusCode)
+                    } catch let error {
+                        self.logger.notice("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") ERROR")
+                        self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") \(error.localizedDescription)")
+                        completion(.failure(error))
+                        return
+                    }
+                }
+                
                 if let error = error {
                     self.logger.notice("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") ERROR")
                     self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") \(error.localizedDescription)")
                     completion(.failure(error))
+                    return
                 }
 
                 if let data = data {
@@ -180,14 +193,6 @@ public class API {
                         self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") \(error.localizedDescription)")
                         completion(.failure(error))
                     }
-                } else {
-                    do {
-                        throw Errors.ServerError.notFound
-                    } catch {
-                        completion(.failure(error))
-                    }
-                    self.logger.notice("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") ERROR")
-                    self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") UNCAUGHT ERROR")
                 }
             }.resume()
         } else {
