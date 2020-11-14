@@ -23,11 +23,15 @@ public class API {
 
     private var logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "API")
 
-    public init(_ host: String = "192.168.178.10", _ port: Int = 8096, _ user: AuthUser? = nil, _ deviceID: String? = nil) {
+    public init(_ host: String = "", _ port: Int = 8096, _ user: AuthUser? = nil, _ deviceID: String? = nil) {
         self.host = host
         self.port = port
         self.deviceId = user?.deviceID ?? deviceID ?? UUID().uuidString
         self.currentUser = user
+    }
+    
+    public var hasAddress: Bool {
+        return self.host != "" && self.host != "localhost"
     }
 
 
@@ -177,6 +181,11 @@ public class API {
                         completion(.failure(error))
                     }
                 } else {
+                    do {
+                        throw Errors.ServerError.notFound
+                    } catch {
+                        completion(.failure(error))
+                    }
                     self.logger.notice("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") ERROR")
                     self.logger.debug("\(request.httpMethod?.uppercased() ?? "UNKNOWN") \(request.url?.absoluteString ?? "URL") UNCAUGHT ERROR")
                 }
