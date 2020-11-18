@@ -9,32 +9,61 @@ import Foundation
 import AVFoundation
 import os
 
+
+/// API Wrapper for Jellyfin API (Equivalent to Emby API)
 public class API {
+    
+    /// API Models
     public class Models {}
+    
+    
+    /// API Responses
     public class Responses {}
+    
+    
+    /// API Errors
     public class Errors {}
     
-    private let scheme: String = "http"
+    
+    /// URL Scheme
+    private let scheme: String
+    
+    /// Server host
     public let host: String
+    
+    /// Server port
     public let port: Int
 
+    /// Client Device ID
     private let deviceId: String
+    
+    /// Authenticated User
     private var currentUser: AuthUser?
-
+    
+    /// Logger
     private var logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "API")
 
-    public init(_ host: String = "", _ port: Int = 8096, _ user: AuthUser? = nil, _ deviceID: String? = nil) {
+    public init(_ host: String = "", _ port: Int = 8096, _ user: AuthUser? = nil, _ deviceID: String? = nil, _ isHttpsEnabled: Bool = false) {
         self.host = host
         self.port = port
         self.deviceId = user?.deviceID ?? deviceID ?? UUID().uuidString
         self.currentUser = user
+        self.scheme = isHttpsEnabled ? "https" : "http"
     }
     
+    
+    /// true if the API Wrapper has a valid adress
     public var hasAddress: Bool {
         return self.host != "" && self.host != "localhost"
     }
 
-
+    
+    /// Creates URLRequest with given parameters
+    /// - Parameters:
+    ///   - path: URL Path
+    ///   - params: Query Items
+    ///   - headers: Headers
+    /// - Returns: URLRequest
     private func makeRequest(_ path: String, _ params: [String: String?] = [:], _ headers: [String: String] = [:]) -> URLRequest {
         var urlComponents = URLComponents()
         urlComponents.scheme = self.scheme
@@ -55,6 +84,12 @@ public class API {
         return request
     }
 
+    
+    /// Executes HTTP Request (GET)
+    /// - Parameters:
+    ///   - path: URL Path
+    ///   - params: Query Items
+    ///   - completion: API Response Completion
     private func get(_ path: String, _ params: [String: String?] = [:], completion: @escaping Completions.Response) {
         let request = self.makeRequest(path, params)
         URLSession.shared.dataTask(with: request) { (data, response, error) in
@@ -81,6 +116,11 @@ public class API {
         }.resume()
     }
 
+    /// Executes HTTP Request (POST)
+    /// - Parameters:
+    ///   - path: URL Path
+    ///   - data: Post Data
+    ///   - completion: API Response Completion
     private func post(_ path: String, _ data: Data? = nil, _ completion: @escaping Completions.Basic) {
         var urlComponents = URLComponents()
         urlComponents.scheme = self.scheme
@@ -112,6 +152,11 @@ public class API {
         }.resume()
     }
 
+    /// Executes HTTP Request (DELETE)
+    /// - Parameters:
+    ///   - path: URL Path
+    ///   - params: Query Items
+    ///   - completion: API Basic Completion
     private func delete(_ path: String, _ params: [String: String?], _ data: Data, _ completion: @escaping Completions.Basic) {
         var request = self.makeRequest(path, params)
         request.httpMethod = "DELETE"
@@ -139,6 +184,13 @@ public class API {
 
 
     //MARK: Authorization
+    
+    
+    /// Authenticates the given account
+    /// - Parameters:
+    ///   - username: Account Username
+    ///   - password: Account Password
+    ///   - completion: AuthResponse Completion
     private func authorizeByName(_ username: String, _ password: String, completion: @escaping Completions.AuthResponse) {
         var urlComponents = URLComponents()
         urlComponents.scheme = self.scheme
@@ -200,6 +252,12 @@ public class API {
         }
     }
 
+    
+    // Authenticates the given account
+    /// - Parameters:
+    ///   - username: Account Username
+    ///   - password: Account Password
+    ///   - completion: AuthResponse Completion
     public func authorize(_ username: String, _ password: String, completion: @escaping Completions.AuthResponse) {
         self.logger.info("API.authorize started")
         self.logger.debug("API.authorize '\(username)' @ '\(self.host):\(self.port)'  ")
@@ -211,6 +269,10 @@ public class API {
 
 
     //MARK: System Info
+    
+    
+    /// Fetches the System Info from the Server
+    /// - Parameter completion: SystemInfo Completion
     public func getSystemInfo(completion: @escaping Completions.SystemInfo) {
         self.logger.info("API.getSystemInfo started")
         let path = "/System/Info"
@@ -235,6 +297,12 @@ public class API {
 
 
     //MARK: Query Items
+    
+    
+    /// Retrieves all Items of the given type (or simply all items of type "Series" and "Movie" if no type is given)
+    /// - Parameters:
+    ///   - type: MediaType
+    ///   - completion: Items Completion
     public func getItems(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getItems started")
         self.logger.debug("API.getItems type: \(type?.rawValue ?? "none")")
@@ -261,6 +329,11 @@ public class API {
         }
     }
 
+    
+    /// Retrieves Latest Items of given type (or "Series,Movie" if none given)
+    /// - Parameters:
+    ///   - type: MediaType
+    ///   - completion: Items Completion
     public func getLatest(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getLatest started")
         self.logger.debug("API.getLatest type: \(type?.rawValue ?? "none")")
@@ -289,6 +362,10 @@ public class API {
         }
     }
 
+    /// Retrieves Resumable Items of given type (or "Series,Movie" if none given)
+    /// - Parameters:
+    ///   - type: MediaType
+    ///   - completion: Items Completion
     public func getResumable(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getResumable started")
         self.logger.debug("API.getResumable type: \(type?.rawValue ?? "none")")
@@ -318,9 +395,11 @@ public class API {
         }
     }
     
-    public func getNextUp(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
+    /// Retrieves Next Up Episodes
+    /// - Parameters:
+    ///   - completion: Items Completion
+    public func getNextUp(_ completion: @escaping Completions.Items) {
         self.logger.info("API.getNextUp started")
-        self.logger.debug("API.getNextUp type: \(type?.rawValue ?? "none")")
         let path = "/Shows/NextUp"
         let params = [
             "userId": currentUser?.id ?? ""
@@ -342,6 +421,10 @@ public class API {
         }
     }
 
+    /// Retrieves Favorite Items of given type (or "Series,Movie" if none given)
+    /// - Parameters:
+    ///   - type: MediaType
+    ///   - completion: Items Completion
     public func getFavorites(_ type: Models.MediaType? = nil, completion: @escaping Completions.Items) {
         self.logger.info("API.getFavorites started")
         self.logger.debug("API.getFavorites type: \(type?.rawValue ?? "none")")
@@ -369,6 +452,10 @@ public class API {
         }
     }
 
+    /// Retrieves Similar Items to given Item (id)
+    /// - Parameters:
+    ///   - item_id: Item ID
+    ///   - completion: Items Completion
     public func getSimilar(for item_id: String, completion: @escaping Completions.Items) {
         self.logger.info("API.getSimilar started")
         self.logger.debug("API.getSimilar item: \(item_id)")
@@ -397,6 +484,13 @@ public class API {
         }
     }
 
+    
+    //MARK: Detail Items
+    
+    /// Retrieves all data for given Item ID
+    /// - Parameters:
+    ///   - item_id: Movie Item ID
+    ///   - completion: Movie Completion
     public func getMovie(_ item_id: String, completion: @escaping Completions.Movie) {
         self.logger.info("API.getMovie started")
         self.logger.debug("API.getMovie item: \(item_id)")
@@ -418,32 +512,11 @@ public class API {
             }
         }
     }
-
-
-    // MARK: Get Images
-    public func getImages(for item_id: String, completion: @escaping Completions.Images) {
-        self.logger.info("API.getImages started")
-        self.logger.debug("API.getImages item: \(item_id)")
-        let path = "/Items/\(item_id)/Images"
-        self.get(path) { (result) in
-            switch result {
-                case .success(let data):
-                    do {
-                        let response = try JSONDecoder().decode([Models.Image].self, from: data)
-                        self.logger.info("API.getImages completed")
-                        completion(.success(response))
-                    } catch let error {
-                        self.logger.notice("API.getImages ERROR")
-                        self.logger.debug("API.getImages \(error.localizedDescription)")
-                        completion(.failure(error))
-                    }
-                case .failure(let error): completion(.failure(error))
-            }
-        }
-    }
-
-
-    // MARK: Shows (Seasons, Episodes)
+    
+    /// Retrieves all data for given Item ID
+    /// - Parameters:
+    ///   - item_id: Series Item ID
+    ///   - completion: Series Completion
     public func getSeries(_ item_id: String, completion: @escaping Completions.Series) {
         self.logger.info("API.getSeries started")
         self.logger.debug("API.getSeries item: \(item_id)")
@@ -467,7 +540,11 @@ public class API {
             }
         }
     }
-
+    
+    /// Retrieves all Seasons for given Series
+    /// - Parameters:
+    ///   - series_id: Series Item ID
+    ///   - completion: Seasons Completion
     public func getSeasons(for series_id: String, completion: @escaping Completions.Seasons) {
         self.logger.info("API.getSeasons started")
         self.logger.debug("API.getSeasons series: \(series_id)")
@@ -495,6 +572,10 @@ public class API {
         }
     }
 
+    /// Retrieves all Episodes for given Series
+    /// - Parameters:
+    ///   - series_id: Series Item ID
+    ///   - completion: Episodes Completion
     public func getEpisodes(for series_id: String, completion: @escaping Completions.Episodes) {
         self.logger.info("API.getEpisodes started")
         self.logger.debug("API.getEpisodes series: \(series_id)")
@@ -523,9 +604,40 @@ public class API {
         }
     }
 
-
+    
+    // MARK: Get Images
+    
+    /// Retrieves all Images (Ids) for given Item
+    /// - Parameters:
+    ///   - item_id: Item ID
+    ///   - completion: Images Completion
+    public func getImages(for item_id: String, completion: @escaping Completions.Images) {
+        self.logger.info("API.getImages started")
+        self.logger.debug("API.getImages item: \(item_id)")
+        let path = "/Items/\(item_id)/Images"
+        self.get(path) { (result) in
+            switch result {
+                case .success(let data):
+                    do {
+                        let response = try JSONDecoder().decode([Models.Image].self, from: data)
+                        self.logger.info("API.getImages completed")
+                        completion(.success(response))
+                    } catch let error {
+                        self.logger.notice("API.getImages ERROR")
+                        self.logger.debug("API.getImages \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
+                case .failure(let error): completion(.failure(error))
+            }
+        }
+    }
 
     // MARK: Search
+    
+    /// Queries server for items with given Search Term
+    /// - Parameters:
+    ///   - searchTerm: Search Term String
+    ///   - completion: Items Completion
     public func searchItems(_ searchTerm: String, completion: @escaping Completions.Items) {
         self.logger.info("API.searchItems started")
         self.logger.debug("API.searchItems term: \(searchTerm)")
@@ -554,6 +666,11 @@ public class API {
         }
     }
 
+    
+    /// Queries server for people with given Search Term
+    /// - Parameters:
+    ///   - searchTerm: Search Term String
+    ///   - completion: People Completion
     public func searchPeople(_ searchTerm: String, completion: @escaping Completions.People) {
         self.logger.info("API.searchPeople started")
         self.logger.debug("API.searchPeople term: \(searchTerm)")
@@ -582,6 +699,11 @@ public class API {
     }
 
     // MARK: PlaybackStatus
+    
+    /// Tells the server that playback has started
+    /// - Parameters:
+    ///   - item_id: Playing Item ID
+    ///   - positionTicks: Current Position Ticks
     public func startPlayback(for item_id: String, at positionTicks: Int) {
         self.logger.info("API.startPlayback started")
         self.logger.debug("API.startPlayback item: \(item_id) position: \(positionTicks)")
@@ -603,6 +725,10 @@ public class API {
         }
     }
 
+    /// Reports continuing playback to the server
+    /// - Parameters:
+    ///   - item_id: Playing Item ID
+    ///   - positionTicks: Current Position Ticks
     public func reportPlayback(for item_id: String, positionTicks: Int) {
         self.logger.info("API.reportPlayback started")
         self.logger.debug("API.reportPlayback item: \(item_id) position: \(positionTicks)")
@@ -624,6 +750,10 @@ public class API {
         }
     }
 
+    /// Tells the server that playback has stopped
+    /// - Parameters:
+    ///   - item_id: Playing Item ID
+    ///   - positionTicks: end Position Ticks
     public func stopPlayback(for item_id: String, positionTicks: Int) {
         self.logger.info("API.stopPlayback started")
         self.logger.debug("API.stopPlayback item: \(item_id) position: \(positionTicks)")
@@ -659,7 +789,12 @@ public class API {
     }
 
 
-
+    
+    /// Creates URL for Stream of Item and MediaSource
+    /// - Parameters:
+    ///   - item_id: Item ID (of Media Source)
+    ///   - source_id: Media Source
+    /// - Returns: URL
     public func getStreamURL(for item_id: String, _ source_id: String) -> URL {
         self.logger.info("API.stopPlayback item: \(item_id) source: \(source_id)")
         let path = "/videos/18f93bce-e588-75f1-5a12-7dc7aa05f041/master.m3u8"
