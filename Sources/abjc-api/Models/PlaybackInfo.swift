@@ -28,9 +28,9 @@ extension API.Models {
             }
             
             public enum Event: String, Codable {
-                case timeUpdate = "TimeUpdate"
-                case pause = "Pause"
-                case unpause = "Unpause"
+                case timeUpdate = "timeupdate"
+                case pause = "pause"
+                case unpause = "unpause"
             }
         }
         

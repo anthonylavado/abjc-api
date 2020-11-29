@@ -17,7 +17,7 @@ extension API.Models {
         public let hasPassword: Bool
         public let hasConfiguredPassword: Bool
         public let hasConfiguredEasyPassword: Bool
-        public let enableAutoLogin: Bool
+        public var enableAutoLogin: Bool? = true
         public let lastLoginDate: String
         public let lastActivityDate: String
 //        public let configuration: Configuration

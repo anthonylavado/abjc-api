@@ -11,7 +11,7 @@ extension API.Models {
     public struct UserData: Decodable {
         public let playbackPositionTicks: Int
         public var playbackPosition: Int {
-            return Int(playbackPositionTicks/1000000)
+            return Int(playbackPositionTicks/10000000)
         }
         public let playCount: Int
         public let isFavorite: Bool
