@@ -26,7 +26,7 @@ public class API {
     
     
     /// URL Scheme
-    private let scheme: String
+    private var scheme: String
     
     /// Server host
     public let host: String
@@ -258,7 +258,9 @@ public class API {
     ///   - username: Account Username
     ///   - password: Account Password
     ///   - completion: AuthResponse Completion
-    public func authorize(_ username: String, _ password: String, completion: @escaping Completions.AuthResponse) {
+    public func authorize(_ username: String, _ password: String, _ isHttpsEnabled: Bool = false, completion: @escaping Completions.AuthResponse) {
+        
+        self.scheme = isHttpsEnabled ? "https" : "http"
         self.logger.info("API.authorize started")
         self.logger.debug("API.authorize '\(username)' @ '\(self.host):\(self.port)'  ")
         self.authorizeByName(username, password) { result in
