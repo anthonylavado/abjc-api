@@ -320,6 +320,18 @@ public class API {
                     do {
                         let response = try JSONDecoder().decode(Responses.ItemResponse<[Models.Item]>.self, from: data)
                         self.logger.info("API.getItems completed")
+                        
+//                        #warning("REMOVE")
+//                        do {
+//                            // make sure this JSON is in the format we expect
+//                            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+//                                // try to read out a string array
+//                                print(json)
+//                            }
+//                        } catch let error as NSError {
+//                            print("Failed to load: \(error.localizedDescription)")
+//                        }
+                        
                         completion(.success(response.items))
                     } catch let error {
                         self.logger.notice("API.getItems ERROR")

@@ -16,6 +16,7 @@ extension API.Models {
         
         public var id: String
         public var name: String
+//        public var sortName: String
         public let overview: String?
         public let year: Int?
         public var genres: [Genre] = []
