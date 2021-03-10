@@ -174,6 +174,9 @@ open class UDPBroadcastConnection {
                     self.errorHandler?(ConnectionError.underlying(error: error))
                 }
             }
+            
+            #warning("Fix Pointer Errors")
+//            pointer.
         }
         
         newResponseSource.resume()
