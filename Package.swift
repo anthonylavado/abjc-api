@@ -7,8 +7,8 @@ let package = Package(
     name: "abjc-api",
     platforms: [
         .iOS(.v14),
-        .tvOS(.v14)
-//        .macOS(.v10_15)
+        .tvOS(.v14),
+        .macOS(.v11)
     ],
     products: [
         .library(

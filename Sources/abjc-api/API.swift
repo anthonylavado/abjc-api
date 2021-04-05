@@ -314,6 +314,8 @@ public class API {
             "IncludeItemTypes": type?.rawValue ?? "Series,Movie",
             "Fields": "Genres,Overview"
         ]
+        
+        print("USERID", self.currentUser?.id ?? "")
         self.get(path, params) { (result) in
             switch result {
                 case .success(let data):
@@ -498,6 +500,7 @@ public class API {
         }
     }
 
+    
     
     //MARK: Detail Items
     
